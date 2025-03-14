@@ -16,25 +16,66 @@ from datasets import build_dataset, get_coco_api_from_dataset
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
     
+    parser.add_argument('--batch_size', default=2, type=int)
+    
     # dataset parameters
+    parser.add_argument('--device', default='cuda', help='device to use for training / testing')
+    parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--dataset_file', default='coco')
     parser.add_argument('--coco_path', type=str)
+    parser.add_argument('--num_workers', default=2, type=int)
+    
+    parser.add_argument('--output_dir', default='',
+                        help='path where to save, empty for no saving')
+    
+    # distributed training parameters
+    parser.add_argument('--world_size', default=1, type=int,
+                        help='number of distributed processes')
+    parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     
     return parser
     
 def main(args):
+    utils.init_distributed_mode(args)   # 初始化分布式训练环境 set args.rank/.world_size(if have)/.gpu/.distributed
+    print("git:\n  {}\n".format(utils.get_sha()))
     
+    print(args)
+    device = torch.device(args.device)
+    
+    # fix the seed for reproducibility
+    seed = args.seed + utils.get_rank()
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    
+    # initial dataset / Dataloader
     dataset_train = build_dataset(image_set='train', args=args)
     dataset_val = build_dataset(image_set='val', args=args)
     
-    dataloader_train = DataLoader(dataset=dataset_train, batch_size=1, shuffle=False, collate_fn=utils.collate_fn)
-    dataloader_val = DataLoader(dataset=dataset_val, batch_size=1, shuffle=False, collate_fn=utils.collate_fn)
-
-    image, target = next(iter(dataloader_train))
-    print(image.tensors.shape)
-    print(target)
-
+    if args.distributed:
+        # 分布式采样
+        sampler_train = DistributedSampler(dataset_train)
+        sampler_val = DistributedSampler(dataset_val, shuffle=False)
+    else:
+        sampler_train = torch.utils.data.RandomSampler(dataset_train)
+        sampler_val = torch.utils.data.SequentialSampler(dataset_val)
+    
+    batch_sampler_train = torch.utils.data.BatchSampler(
+        sampler_train, args.batch_size, drop_last=True
+    )
+    
+    data_loader_train = DataLoader(dataset_train, batch_sampler=batch_sampler_train, 
+                                   collate_fn=utils.collate_fn, num_workers=args.num_workers)
+    data_loader_val = DataLoader(dataset_val, args.batch_size, sampler=sampler_val,
+                                 drop_last=False, collate_fn=utils.collate_fn, num_workers=args.num_workers)
+    
+    output_dir = Path(args.output_dir)
+    
+    
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('DETR training and evaluation script', parents=[get_args_parser()])
     args = parser.parse_args()
+    if args.output_dir:
+        Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     main(args)

@@ -1,0 +1,1 @@
+python main.py --coco_path ../datasets/minicoco --output_dir output
