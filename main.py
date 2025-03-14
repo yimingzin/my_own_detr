@@ -16,7 +16,28 @@ from datasets import build_dataset, get_coco_api_from_dataset
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
     
+    # * Train
     parser.add_argument('--batch_size', default=2, type=int)
+    parser.add_argument('--lr_backbone', default=1e-5, type=float)
+    
+    # Model parameters
+    parser.add_argument('--frozen_weights', type=str, default=None,
+                        help="Path to the pretrained model. If set, only the mask head will be trained")
+    # * Backbone
+    parser.add_argument('--backbone', default='resnet50', type=str,
+                        help="Name of the convolutional backbone to use")
+    parser.add_argument('--dilation', action='store_true',
+                        help="If true, we replace stride with dilation in the last convolutional block (DC5)")
+    parser.add_argument('--position_embedding', default='learned', type=str, choices=('sine', 'learned'),
+                        help="Type of positional embedding to use on top of the image features")
+    
+    # * Transformer
+    parser.add_argument('--hidden_dim', default=256, type=int,
+                        help="Size of the embeddings (dimension of the transformer)")
+    
+     # * Segmentation
+    parser.add_argument('--masks', action='store_true',
+                        help="Train segmentation head if the flag is provided")
     
     # dataset parameters
     parser.add_argument('--device', default='cuda', help='device to use for training / testing')
@@ -71,8 +92,19 @@ def main(args):
     
     output_dir = Path(args.output_dir)
     
+    image, target = next(iter(data_loader_train))
+    print(image.tensors.shape)
+    from models.backbone import build_backbone
+    model = build_backbone(args)
+    out, pos = model(image)
+    print("backbone out: ")
+    for i in out:
+        print(i.tensors.shape)
     
-    
+    print("pos out: ")
+    for j in pos:
+        print(j.shape)
+        
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('DETR training and evaluation script', parents=[get_args_parser()])
     args = parser.parse_args()
