@@ -12,4 +12,4 @@ from util.misc import (NestedTensor, nested_tensor_from_tensor_list,
 
 from .backbone import build_backbone
 # from .matcher import build_matcher
-# from .transformer import build_transformer
+from .transformer import build_transformer

@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from torch import nn
 from torch.utils.data import DataLoader, DistributedSampler
 
 import datasets
@@ -34,6 +35,19 @@ def get_args_parser():
     # * Transformer
     parser.add_argument('--hidden_dim', default=256, type=int,
                         help="Size of the embeddings (dimension of the transformer)")
+    parser.add_argument('--dropout', default=0.1, type=float,
+                        help="Dropout applied in the transformer")
+    parser.add_argument('--nheads', default=8, type=int,
+                        help="Number of attention heads inside the transformer's attentions")
+    parser.add_argument('--dim_feedforward', default=2048, type=int,
+                        help="Intermediate size of the feedforward layers in the transformer blocks")
+    parser.add_argument('--enc_layers', default=6, type=int,
+                        help="Number of encoding layers in the transformer")
+    parser.add_argument('--dec_layers', default=6, type=int,
+                        help="Number of decoding layers in the transformer")
+    parser.add_argument('--pre_norm', action='store_true')      # 使用 --pre_norm 参数，args.pre_norm 的值将被设置为 True
+    parser.add_argument('--num_queries', default=100, type=int,
+                        help="Number of query slots")
     
      # * Segmentation
     parser.add_argument('--masks', action='store_true',
@@ -105,6 +119,18 @@ def main(args):
     for j in pos:
         print(j.shape)
         
+    from models.transformer import build_transformer
+    model_transofmer = build_transformer(args)
+    
+    src, mask = out[-1].decompose()
+    query_embed = nn.Embedding(args.num_queries, args.hidden_dim)
+    input_proj = nn.Conv2d(in_channels=2048, out_channels=args.hidden_dim, kernel_size=1)
+    hs, memory = model_transofmer(input_proj(src), mask, query_embed.weight, pos[-1])
+    
+    print(hs.shape)
+    for i in memory:
+        print(i.shape)
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('DETR training and evaluation script', parents=[get_args_parser()])
     args = parser.parse_args()
