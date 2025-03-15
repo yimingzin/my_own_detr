@@ -11,5 +11,5 @@ from util.misc import (NestedTensor, nested_tensor_from_tensor_list,
                        is_dist_avail_and_initialized)
 
 from .backbone import build_backbone
-# from .matcher import build_matcher
+from .matcher import build_matcher
 from .transformer import build_transformer

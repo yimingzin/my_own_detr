@@ -68,6 +68,14 @@ def get_args_parser():
                         help='number of distributed processes')
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     
+    # * Matcher - set cost weight
+    parser.add_argument('--set_cost_class', default=1, type=float,
+                        help="Class coefficient in the matching cost")
+    parser.add_argument('--set_cost_bbox', default=5, type=float,
+                        help="L1 box coefficient in the matching cost")
+    parser.add_argument('--set_cost_giou', default=2, type=float,
+                        help="giou box coefficient in the matching cost")
+    
     return parser
     
 def main(args):
