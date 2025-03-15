@@ -41,15 +41,15 @@ class Transformer(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    def forward(self, src, mask, query_embed, pos_embed):
+    def forward(self, src, mask, query_embed, pos_embed):   # conv1x1(out[-1]), mask, query_embed.weight(args.num_queries, args.hidden_dim), pos[-1]
         # flatten NxCxHxW to HWxNxC
         bs, c, h, w = src.shape
-        src = src.flatten(2).permute(2, 0, 1)
-        pos_embed = pos_embed.flatten(2).permute(2, 0, 1)
-        query_embed = query_embed.unsqueeze(1).repeat(1, bs, 1)
+        src = src.flatten(2).permute(2, 0, 1)   # (HW, bs, C)
+        pos_embed = pos_embed.flatten(2).permute(2, 0, 1)   #(bs, hidden_dim, h, w) -> (bs, hidden_dim, HW) -> (HW, bs, hidden_dim)
+        query_embed = query_embed.unsqueeze(1).repeat(1, bs, 1) # (num_queries, hidden_dim) -> (num_queries, bs, hidden_dim)
         mask = mask.flatten(1)
 
-        tgt = torch.zeros_like(query_embed)
+        tgt = torch.zeros_like(query_embed)  # (num_queries, bs, hidden_dim)
         memory = self.encoder(src, src_key_padding_mask=mask, pos=pos_embed)
         hs = self.decoder(tgt, memory, memory_key_padding_mask=mask,
                           pos=pos_embed, query_pos=query_embed)
@@ -191,7 +191,7 @@ class TransformerDecoderLayer(nn.Module):
         self.dropout3 = nn.Dropout(dropout)
         
         self.activation = _get_activation_fn(activation=activation)
-        self.normalize_before = normaliza_before
+        self.normalize_before = normaliza_before    # False
         
     def with_pos_embed(self, tensor, pos: Optional[Tensor]):
         return tensor if pos is None else tensor + pos
@@ -331,9 +331,9 @@ class TransformerDecoder(nn.Module):
                 query_pos=query_pos
             )
             if self.return_intermediate:
-                intermediate.append(self.norm(output))
+                intermediate.append(output)
         
-        # 如果存在归一化层，在遍历完所有解码器之后对最终的outpu再进行归一化
+        # 如果存在归一化层，在遍历完所有解码器之后对最终的outpu再进行归一化 # if True return (num_layers, num_queries, bs, hidden_dim)
         if self.norm is not None: 
             output = self.norm(output)
             if self.return_intermediate:
@@ -343,7 +343,7 @@ class TransformerDecoder(nn.Module):
         if self.return_intermediate:
             return torch.stack(intermediate)
         
-        return output.unsqueeze(dim=0)
+        return output.unsqueeze(dim=0)          # else return (1, num_layers, num_queries, bs, hidden_dim)
     
 def _get_activation_fn(activation):
     """return an activation function given a string"""

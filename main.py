@@ -128,8 +128,7 @@ def main(args):
     hs, memory = model_transofmer(input_proj(src), mask, query_embed.weight, pos[-1])
     
     print(hs.shape)
-    for i in memory:
-        print(i.shape)
+    print(memory.shape)
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('DETR training and evaluation script', parents=[get_args_parser()])

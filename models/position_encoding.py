@@ -72,8 +72,13 @@ class PositionEmbeddingLearned(nn.Module):
         x_emb_repeated = einops.repeat(x_emb, 'w f -> h w f', h=h)
         y_emb_repeated = einops.repeat(y_emb, 'h f -> h w f', w=w)
         
-        pos = torch.cat([x_emb_repeated, y_emb_repeated], dim=-1)   # (h, w, 2*f)
-        pos = pos.permute(2, 0, 1).unsqueeze(dim=0).repeat(x.shape[0], 1, 1, 1) # (batch_size, 2*f, h, w)
+        pos = torch.cat([
+            x_emb.unsqueeze(0).repeat(h, 1, 1),
+            y_emb.unsqueeze(1).repeat(1, w, 1),
+        ], dim=-1).permute(2, 0, 1).unsqueeze(0).repeat(x.shape[0], 1, 1, 1)
+        
+        # pos = torch.cat([x_emb_repeated, y_emb_repeated], dim=-1)   # (h, w, 2*f)
+        # pos = pos.permute(2, 0, 1).unsqueeze(dim=0).repeat(x.shape[0], 1, 1, 1) # (batch_size, 2*f, h, w)
         
         return pos
     

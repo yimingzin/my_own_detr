@@ -1,4 +1,4 @@
-python main.py --coco_path ../datasets/minicoco --output_dir output
+python main.py --coco_path ../datasets/minicoco --output_dir output --pre_norm
 
 image:
 torch.Size([2, 3, 1167, 1039])
