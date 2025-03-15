@@ -32,6 +32,10 @@ def get_args_parser():
     parser.add_argument('--position_embedding', default='learned', type=str, choices=('sine', 'learned'),
                         help="Type of positional embedding to use on top of the image features")
     
+    # Loss
+    parser.add_argument('--no_aux_loss', dest='aux_loss', action='store_false',
+                        help="Disables auxiliary decoding losses (loss at each layer)")
+    
     # * Transformer
     parser.add_argument('--hidden_dim', default=256, type=int,
                         help="Size of the embeddings (dimension of the transformer)")
@@ -137,6 +141,19 @@ def main(args):
     
     print(hs.shape)
     print(memory.shape)
+    
+    # -----------
+    from models.detr import DETR
+    model_detr = DETR(build_backbone(args),build_transformer(args), 91,args.num_queries ,args.aux_loss)
+    
+    out = model_detr(image)
+    for k, v in out.items():
+        if k == 'aux_outputs':
+            for vv in v:
+                for idx, value in vv.items():
+                    print(f'aux_outputs{idx}: {value.shape}')
+            break
+        print(f'{k} : {v.shape}')
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('DETR training and evaluation script', parents=[get_args_parser()])
